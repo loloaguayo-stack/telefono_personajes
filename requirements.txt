@@ -5,4 +5,5 @@ pydub
 requests
 python-multipart
 websockets
+anthropic
 
