@@ -8,8 +8,8 @@ class VoiceManager:
         
         # IDs de voces reales de ElevenLabs
         self.voices = {
-            "VOICE_1": "EXAVITQu4vr4xnSDxMaL",  # Sarah (femenina, cálida)
-            "VOICE_2": "VR6AewLTigWG4xSOukaG"   # Arnold (masculina, amigable)
+            "VOICE_1": "0q3W5XS7d9TCLhYzzbo5",  # Sarah (femenina, cálida)
+            "VOICE_2": "pNInz6obpgDQGcFmaJgB"   # Arnold (masculina, amigable)
         }
 
     def text_to_speech(self, text: str, voice_id: str) -> bytes:
@@ -55,4 +55,5 @@ class VoiceManager:
 
 voice_manager = VoiceManager(
     api_key=os.getenv("ELEVENLABS_API_KEY", "")
+
 )
