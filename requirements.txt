@@ -3,4 +3,3 @@ uvicorn
 twilio
 pydub
 requests
-numpy
