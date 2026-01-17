@@ -3,7 +3,6 @@ from fastapi import APIRouter, Form, WebSocket
 from fastapi.responses import Response
 from twilio.twiml.voice_response import VoiceResponse, Connect
 from pydub import AudioSegment
-
 from app.voice import voice_manager
 from app.agents import get_agent_by_phone
 from app.config import get_settings
@@ -29,31 +28,27 @@ def mp3_to_mulaw_chunks(mp3_bytes: bytes, chunk_ms: int = 100):
         chunks.append(base64.b64encode(mulaw).decode())
     return chunks
 
-@router.websocket("/media")
-async def media(ws: WebSocket):
-    await ws.accept()
-    stream_sid = None
+@router.post("/respond")
+async def respond(SpeechResult: str = Form(...), From: str = Form(...)):
+    # 1. Identificar vecino
+    agent = get_agent_by_phone(From)
+    
+    # 2. Claude genera respuesta (Texto)
+    ai_text = await llm_manager.get_response(agent.prompt, SpeechResult)
+    
+    # 3. ElevenLabs genera audio y lo guarda en /tmp
+    audio_content = await voice_manager.text_to_speech(ai_text, agent.voice_id)
+    filename = f"reply_{hash(ai_text)}.mp3"
+    with open(f"/tmp/{filename}", "wb") as f:
+        f.write(audio_content)
+    
+    # 4. TwiML para que Twilio reproduzca y vuelva a escuchar
+    vr = VoiceResponse()
+    audio_url = f"{settings.base_url}/get-audio/{filename}"
+    
+    vr.play(audio_url)
+    
+    # Re-enganchamos el Gather para que la conversación siga
+    gather = vr.gather(input="speech", action="/respond", language="es-ES", speech_timeout="auto")
+    return Response(str(vr), media_type="application/xml")
 
-    try:
-        while True:
-            event = json.loads(await ws.receive_text())
-
-            if event["event"] == "start":
-                stream_sid = event["streamSid"]
-                from_number = event["start"].get("from", "")
-                agent = get_agent_by_phone(from_number)
-                mp3 = voice_manager.text_to_speech(agent.greeting, agent.voice_id)
-                for payload in mp3_to_mulaw_chunks(mp3):
-                    await ws.send_text(json.dumps({
-                        "event": "media",
-                        "streamSid": stream_sid,
-                        "media": {"payload": payload}
-                    }))
-
-            elif event["event"] == "stop":
-                break
-
-    except Exception as e:
-        print("WS error:", e)
-    finally:
-        await ws.close()
