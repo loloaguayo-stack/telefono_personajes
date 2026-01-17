@@ -1,6 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 twilio
 pydub
 requests
 python-multipart
+websockets
+
